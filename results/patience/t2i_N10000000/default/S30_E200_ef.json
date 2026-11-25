@@ -1,0 +1,44 @@
+{
+ "ds": "t2i",
+ "S": 30,
+ "E": 200,
+ "queue": "ef",
+ "k": 200,
+ "p": 60,
+ "s": "0.995",
+ "recall": 0.97685,
+ "ndis": 85720.7,
+ "direct_same": true,
+ "fixed_at_E": {
+  "recall": 0.9820500000000009,
+  "ndis": 112595.303
+ },
+ "ratio_same_ef": 0.761316837523853,
+ "bootstrap": {
+  "nq": 1000,
+  "delta_pp": -0.52,
+  "delta_ci": [
+   -0.64,
+   -0.405
+  ],
+  "p_violate": 0.0,
+  "verdict": "within",
+  "n_needed": 64,
+  "ndis_ratio": 0.7613,
+  "ndis_ci": [
+   0.7578,
+   0.7648
+  ]
+ },
+ "fixed_matched": {
+  "ef": 150,
+  "recall": 0.977,
+  "ndis": 90040.8,
+  "src": "record",
+  "probes": {
+   "149": 0.97685
+  },
+  "ndis_at_target": 90040.8
+ },
+ "ratio_same_recall": 0.9520206395323009
+}

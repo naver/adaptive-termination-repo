@@ -1,0 +1,11 @@
+# adaptive-termination-repo
+# Copyright (c) 2026-present NAVER Corp.
+# CC BY-NC-SA 4.0 (https://creativecommons.org/licenses/by-nc-sa/4.0/)
+#
+# Analysis, calibration replay and figures
+numpy>=1.24
+matplotlib>=3.7
+# Dataset preparation only
+h5py>=3.8        # GloVe and SIFT (ANN-Benchmarks .hdf5)
+pyarrow>=12      # MS MARCO corpus vectors (parquet)
+pandas>=1.5      # MS MARCO dev query vectors (pickled DataFrame)

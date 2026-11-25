@@ -1,0 +1,89 @@
+[
+ {
+  "S": 30,
+  "nq": 1000,
+  "ki": 5,
+  "rule_k": 5,
+  "ef": 64,
+  "trace": "S30_E64.bin",
+  "fixed_end": {
+   "recall": 0.9713000000000009,
+   "ndis": 57576.188
+  },
+  "results": [
+   {
+    "kind": "fixed",
+    "recall": 0.9713000000000009,
+    "ndis": 57576.188,
+    "stopped": 0.0,
+    "empty_frac": 0.5201,
+    "empty_share": 0.5240023184584571,
+    "all": {
+     "n": 30000,
+     "ndis_per_query": 57576.188,
+     "base_mean": 1784.8972,
+     "base_median": 1769.0,
+     "base_p1": 880.0,
+     "base_min": 628,
+     "stopped": 0.0
+    },
+    "empty": {
+     "n": 15603,
+     "ndis_per_query": 30170.056,
+     "base_mean": 1799.7868358648977,
+     "base_median": 1784.0,
+     "base_p1": 883.0,
+     "base_min": 647,
+     "stopped": 0.0
+    },
+    "useful": {
+     "n": 14397,
+     "ndis_per_query": 27406.132,
+     "base_mean": 1768.7602972841564,
+     "base_median": 1754.0,
+     "base_p1": 878.0,
+     "base_min": 628,
+     "stopped": 0.0
+    }
+   },
+   {
+    "kind": "patience",
+    "queue": "ki",
+    "p": 20,
+    "s": "0.969697",
+    "recall": 0.9501500000000009,
+    "ndis": 31612.47,
+    "stopped": 0.9967333333333334,
+    "empty_frac": 0.5201,
+    "empty_share": 0.5355624853103854,
+    "all": {
+     "n": 30000,
+     "ndis_per_query": 31612.47,
+     "base_mean": 919.4399333333333,
+     "base_median": 863.0,
+     "base_p1": 426.0,
+     "base_min": 292,
+     "stopped": 0.9967333333333334
+    },
+    "empty": {
+     "n": 15603,
+     "ndis_per_query": 16930.453,
+     "base_mean": 951.2575145805293,
+     "base_median": 890.0,
+     "base_p1": 432.0,
+     "base_min": 307,
+     "stopped": 0.9956418637441518
+    },
+    "useful": {
+     "n": 14397,
+     "ndis_per_query": 14682.017,
+     "base_mean": 884.9570743904981,
+     "base_median": 838.0,
+     "base_p1": 419.0,
+     "base_min": 292,
+     "stopped": 0.9979162325484476
+    }
+   }
+  ]
+ }
+]

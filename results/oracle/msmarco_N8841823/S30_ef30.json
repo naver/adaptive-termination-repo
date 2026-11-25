@@ -1,0 +1,7 @@
+{"S": 30, "K": 20, "ki": 5, "ef": 30, "nq": 1000,
+ "recall": 0.95050,
+ "ref_ndis_per_query": 33283.3, "oracle_ndis_per_query": 7165.0, "ratio": 0.2153,
+ "empty_shards": {"frac": 0.5302, "ndis_per_query": 17869.5, "oracle_per_query": 2128.1},
+ "useful_shards": {"frac": 0.4698, "ndis_per_query": 15413.7, "oracle_per_query": 5036.9},
+ "waste_split": {"empty": 15741.5, "confirm": 10376.8},
+ "note": "oracle = stop the instant the last kept ground-truth neighbour entered the result heap, per shard, on this same ef=30 trajectory; upper-layer descent is not refundable. waste_split divides (ref - oracle) by whether the shard returned any true neighbour in its final result: 'empty' contributed nothing (mostly the partitioning tail (1-1/S)^K, plus a few percent of shards that held an answer but missed it -- at S=1 it is only the latter), 'useful' is confirmation after the last kept answer arrived."}

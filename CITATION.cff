@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this package, please cite the paper below."
+type: software
+title: "Reproducibility package: per-shard adaptive termination under forced sharding"
+authors:
+  - family-names: Shin
+    given-names: Woojin
+    affiliation: NAVER Corp.
+  - family-names: Choe
+    given-names: Gyusik
+    affiliation: NAVER Corp.
+repository-code: "https://github.com/naver/adaptive-termination-repo"
+license: CC-BY-NC-SA-4.0
+preferred-citation:
+  type: generic
+  title: "Each Shard Knows When to Stop: Measuring and Reducing the Cost of Hash-Sharded HNSW Search"
+  authors:
+    - family-names: Shin
+      given-names: Woojin
+      affiliation: NAVER Corp.
+    - family-names: Choe
+      given-names: Gyusik
+      affiliation: NAVER Corp.
+  year: 2026
+  notes: "Preprint. The arXiv identifier will be added once available."

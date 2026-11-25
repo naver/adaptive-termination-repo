@@ -1,0 +1,148 @@
+{
+ "S": 30,
+ "nq": 1000,
+ "ki": 12,
+ "rule_k": 100,
+ "ef": 200,
+ "K": 100,
+ "gammas": [
+  "0.0001",
+  "0.0001"
+ ],
+ "nrec": 30000,
+ "all": {
+  "n": 30000,
+  "never_have": 0,
+  "pops_to_have": {
+   "min": 3,
+   "p1": 3.0,
+   "median": 4.0,
+   "p99": 6.0,
+   "max": 10
+  },
+  "base_at_have": {
+   "min": 99,
+   "p1": 99.0,
+   "median": 118.0,
+   "p99": 163.0
+  },
+  "upper_ndis": {
+   "median": 131.0
+  },
+  "npop_total": {
+   "median": 200.0
+  },
+  "base_end": {
+   "median": 4536.0
+  },
+  "at_gamma": {
+   "0.0001": {
+    "fired_frac": 1.0,
+    "stop_at_have_frac": 0.0,
+    "stop_at_have_frac_of_fired": 0.0,
+    "stop_within_2pops_of_have_frac": 0.0,
+    "base_at_stop": {
+     "min": 957,
+     "p1": 1233.0,
+     "p10": 1755.0,
+     "median": 2567.0,
+     "mean": 2584.3758
+    },
+    "pops_at_stop": {
+     "min": 101,
+     "median": 102.0
+    }
+   }
+  }
+ },
+ "empty": {
+  "n": 1048,
+  "never_have": 0,
+  "pops_to_have": {
+   "min": 3,
+   "p1": 3.0,
+   "median": 4.0,
+   "p99": 6.0,
+   "max": 7
+  },
+  "base_at_have": {
+   "min": 99,
+   "p1": 99.0,
+   "median": 118.5,
+   "p99": 164.52999999999997
+  },
+  "upper_ndis": {
+   "median": 129.0
+  },
+  "npop_total": {
+   "median": 200.0
+  },
+  "base_end": {
+   "median": 4625.0
+  },
+  "at_gamma": {
+   "0.0001": {
+    "fired_frac": 1.0,
+    "stop_at_have_frac": 0.0,
+    "stop_at_have_frac_of_fired": 0.0,
+    "stop_within_2pops_of_have_frac": 0.0,
+    "base_at_stop": {
+     "min": 1052,
+     "p1": 1310.76,
+     "p10": 1778.4,
+     "median": 2635.0,
+     "mean": 2655.6498091603053
+    },
+    "pops_at_stop": {
+     "min": 101,
+     "median": 102.0
+    }
+   }
+  }
+ },
+ "useful": {
+  "n": 28952,
+  "never_have": 0,
+  "pops_to_have": {
+   "min": 3,
+   "p1": 3.0,
+   "median": 4.0,
+   "p99": 6.0,
+   "max": 10
+  },
+  "base_at_have": {
+   "min": 99,
+   "p1": 99.0,
+   "median": 117.0,
+   "p99": 163.0
+  },
+  "upper_ndis": {
+   "median": 131.0
+  },
+  "npop_total": {
+   "median": 200.0
+  },
+  "base_end": {
+   "median": 4532.0
+  },
+  "at_gamma": {
+   "0.0001": {
+    "fired_frac": 1.0,
+    "stop_at_have_frac": 0.0,
+    "stop_at_have_frac_of_fired": 0.0,
+    "stop_within_2pops_of_have_frac": 0.0,
+    "base_at_stop": {
+     "min": 957,
+     "p1": 1232.51,
+     "p10": 1755.0,
+     "median": 2565.0,
+     "mean": 2581.7958344846643
+    },
+    "pops_at_stop": {
+     "min": 101,
+     "median": 102.0
+    }
+   }
+  }
+ }
+}

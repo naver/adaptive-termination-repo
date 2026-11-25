@@ -1,0 +1,128 @@
+{
+ "S": 1,
+ "nq": 1000,
+ "ki": 20,
+ "rule_k": 20,
+ "ef": 32,
+ "curve": [
+  {
+   "gamma": 0.0,
+   "recall": 0.918200000000001,
+   "ndis": 1023.989
+  },
+  {
+   "gamma": 0.005,
+   "recall": 0.8981000000000016,
+   "ndis": 842.035
+  },
+  {
+   "gamma": 0.01,
+   "recall": 0.9074000000000014,
+   "ndis": 894.358
+  },
+  {
+   "gamma": 0.015,
+   "recall": 0.9144000000000014,
+   "ndis": 936.267
+  },
+  {
+   "gamma": 0.02,
+   "recall": 0.9169500000000012,
+   "ndis": 963.162
+  },
+  {
+   "gamma": 0.025,
+   "recall": 0.9177500000000012,
+   "ndis": 980.839
+  },
+  {
+   "gamma": 0.03,
+   "recall": 0.918000000000001,
+   "ndis": 991.966
+  },
+  {
+   "gamma": 0.035,
+   "recall": 0.918100000000001,
+   "ndis": 1000.556
+  },
+  {
+   "gamma": 0.04,
+   "recall": 0.918100000000001,
+   "ndis": 1007.435
+  },
+  {
+   "gamma": 0.045,
+   "recall": 0.918100000000001,
+   "ndis": 1011.427
+  },
+  {
+   "gamma": 0.05,
+   "recall": 0.918100000000001,
+   "ndis": 1015.104
+  },
+  {
+   "gamma": 0.06,
+   "recall": 0.9181500000000011,
+   "ndis": 1018.83
+  },
+  {
+   "gamma": 0.08,
+   "recall": 0.918200000000001,
+   "ndis": 1022.108
+  }
+ ],
+ "bench": {
+  "rep": 0,
+  "S": 1,
+  "K": 20,
+  "ki": 20,
+  "rule_k": 20,
+  "ef": 32,
+  "gamma": 0.0,
+  "gamma_shard": [
+   0
+  ],
+  "recall": 0.9182,
+  "ndis_per_query": 1024.0,
+  "wall_sum_ms": {
+   "mean": 0.4912,
+   "p50": 0.4625,
+   "p90": 0.7034,
+   "p99": 1.0121,
+   "p999": 1.8052
+  },
+  "cpu_sum_ms": {
+   "mean": 0.4892,
+   "p50": 0.4618,
+   "p90": 0.6986,
+   "p99": 1.0082
+  },
+  "cpu_over_wall": 0.9964,
+  "cgroup_cpu_ms_total": 4961.0,
+  "merged_ms": {
+   "mean": 0.4912,
+   "p50": 0.4625,
+   "p90": 0.7034,
+   "p99": 1.0121,
+   "p999": 1.8052
+  },
+  "merge_ms": {
+   "mean": 0.00029,
+   "p99": 0.00051
+  },
+  "merge_cpu_ms_mean": 0.00044,
+  "clocks": {
+   "wall": "CLOCK_MONOTONIC",
+   "cpu": "CLOCK_THREAD_CPUTIME_ID",
+   "cgroup_cpu": "cgroup v2 cpu.stat usage_usec"
+  },
+  "note": "cpu_sum_ms/wall_sum_ms are sums over shards measured one at a time; merged_ms is max over shards + merge; merge runs on the coordinator so its CPU is reported separately and excluded from cpu_sum_ms",
+  "noise_floor_ms": [
+   4.865,
+   4.746
+  ],
+  "noise_drift_pct": 2.5,
+  "nr_throttled_delta": 0,
+  "accept": true
+ }
+}

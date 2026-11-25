@@ -1,0 +1,43 @@
+{
+ "raw": {
+  "base.fbin": {
+   "md5": "3ab1f6aecc370acd137d87737082441a",
+   "bytes": 80000000008
+  },
+  "query.fbin": {
+   "md5": "cf789151b3e474b6cae24a32cd7ac88d",
+   "bytes": 80000008
+  }
+ },
+ "ground_truth": {
+  "gt300.ivec": "264298b5e4a84184cbf282daa106c5d0",
+  "gt300_proxy.ivec": "5485a7e454b9cc0b1ab059e44a54db2b",
+  "gt300_q1500.ivec": "725df36da6f521eab3f2179d5a75ddfb"
+ },
+ "ground_truth_origin": "gt300.ivec (#0-999) and gt300_proxy.ivec (#1000-1499): one run each, as in data/ground_truth.sh. gt300_q1500.ivec (#1500-20499): four runs of 4,750 queries concatenated; a single 19,000-query run as in data/ground_truth.sh gives a byte-identical file (md5 725df36da6f521eab3f2179d5a75ddfb).",
+ "prep_report": {
+  "dataset": "t2i100m",
+  "source": {
+   "base": "base.1B.fbin (first 100000000 rows)",
+   "query": "query.public.100K.fbin"
+  },
+  "base": {
+   "rows": 100000000,
+   "dim": 200,
+   "bytes": 80000000008,
+   "rows_checked": 200000,
+   "norm_min": 0.7584635219070563,
+   "norm_max": 0.992422816079468,
+   "norm_mean": 0.965985567334925
+  },
+  "query": {
+   "rows": 100000,
+   "dim": 200,
+   "bytes": 80000008,
+   "rows_checked": 100000,
+   "norm_min": 0.9999998133180608,
+   "norm_max": 1.0000001804827898,
+   "norm_mean": 0.999999999887556
+  }
+ }
+}

@@ -1,0 +1,15 @@
+[
+  {"rep": 0, "S": 5, "K": 20, "ki": 12, "rule_k": 12, "ef": 60, "gamma": 0.0000,
+   "gamma_shard": [0, 0, 0, 0, 0],
+   "recall": 0.99540, "ndis_per_query": 7840.6,
+   "wall_sum_ms": {"mean": 1.0026, "p50": 0.9380, "p90": 1.1223, "p99": 1.2461, "p999": 5.6252},
+   "cpu_sum_ms": {"mean": 0.9242, "p50": 0.9354, "p90": 1.1162, "p99": 1.2289},
+   "cpu_over_wall": 0.9228, "cgroup_cpu_ms_total": 17149.6,
+   "merged_ms": {"mean": 0.3525, "p50": 0.2693, "p90": 0.3316, "p99": 0.3822, "p999": 4.7746},
+   "merge_ms": {"mean": 0.00109, "p99": 0.00136}, "merge_cpu_ms_mean": 0.00123,
+   "clocks": {"wall": "CLOCK_MONOTONIC", "cpu": "CLOCK_THREAD_CPUTIME_ID",
+               "cgroup_cpu": "cgroup v2 cpu.stat usage_usec"},
+   "note": "cpu_sum_ms/wall_sum_ms are sums over shards measured one at a time; merged_ms is max over shards + merge; merge runs on the coordinator so its CPU is reported separately and excluded from cpu_sum_ms",
+   "noise_floor_ms": [83.345, 65.663], "noise_drift_pct": 26.9,
+   "nr_throttled_delta": 1, "accept": false}
+]

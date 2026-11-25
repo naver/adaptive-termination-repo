@@ -1,0 +1,45 @@
+adaptive-termination-repo
+Copyright (c) 2026-present NAVER Corp.
+
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+
+A summary of the CC BY-NC-SA 4.0 license is located here:
+    https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+--------------------------------------------------------------------------------------
+
+This project contains subcomponents with separate copyright notices and license terms.
+Your use of the source code for these subcomponents is subject to the terms and conditions of the following licenses.
+
+=====
+
+facebookresearch/faiss
+https://github.com/facebookresearch/faiss
+
+faiss/patches/0001-adaptive-termination.patch, faiss/patches/0002-traversal-trace.patch and
+faiss/patches/0003-patience.patch are modifications of faiss/impl/HNSW.cpp and faiss/impl/HNSW.h of Faiss v1.15.0
+and contain excerpts of those files. The Faiss excerpts
+remain under the MIT License below; NAVER's modifications are under CC BY-NC-SA 4.0 (see LICENSE).
+Faiss itself is not included in this repository.
+
+MIT License
+
+Copyright (c) Meta Platforms, Inc. and affiliates.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

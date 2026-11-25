@@ -1,0 +1,204 @@
+Copyright (c) Meta Platforms, Inc. and affiliates. MIT License (full text in NOTICE).
+Modified from: https://github.com/facebookresearch/faiss v1.15.0 (faiss/impl/HNSW.cpp, faiss/impl/HNSW.h)
+Modified by NAVER Corp.: queue-saturation early termination (Patience) as a comparison baseline.
+License: the Faiss lines in this diff remain under the MIT License; NAVER's modifications are
+  Copyright (c) 2026-present NAVER Corp. and licensed under CC BY-NC-SA 4.0 (see LICENSE).
+
+Queue-saturation early termination for the HNSW base-layer search (bounded-queue path only), the baseline
+of the paper's comparison with Patience (Teofili and Lin, "Patience in Proximity: A Simple Early Termination
+Strategy for HNSW Graph Traversal in Approximate k-Nearest Neighbor Search", ECIR 2025). Apply after 0002.
+
+SearchParametersHNSW gains patience_p, patience_s and patience_queue. The search keeps a cumulative count of
+insertions into one queue. After each expanded candidate it divides the count after the previous expansion
+by the current count (double precision; 0/0 is NaN and not saturated); a ratio >= patience_s is a saturated
+expansion. When more than patience_p expansions in a row are saturated, the search stops before the next pop.
+The defaults the paper uses are those of Lucene's PatienceKnnVectorQuery: s = 0.995, p = max(7, floor(0.3k)).
+patience_queue chooses what "the queue" is, since here the beam width ef and the k_i results a shard returns
+differ:
+  0 = ef: an auxiliary max-heap of the efSearch smallest distances computed so far (k = ef);
+  1 = ki: the result heap (k = k_i).
+patience_p = 0 (default) disables it: no extra heap is kept and the search is unchanged.
+
+Patience also decides only when to stop, so a run with (s, p, queue) equals the gamma = 0 search cut at the
+first expansion where it fires. For offline replay, trace_ins_ef / trace_ins_ki add two columns to the 0002
+trace: per row, the cumulative insertions into each queue at that point (after the previous expansion).
+
+diff --git a/faiss/impl/HNSW.cpp b/faiss/impl/HNSW.cpp
+index 1684460..101b624 100644
+--- a/faiss/impl/HNSW.cpp
++++ b/faiss/impl/HNSW.cpp
+@@ -931,6 +931,11 @@ int search_from_candidates_fixVT(
+     std::vector<int>* trace_ndis = nullptr;
+     std::vector<idx_t>* trace_ids = nullptr;
+     int trace_k = 0;
++    int patience_p = 0;
++    double patience_s = 0.995;
++    int patience_queue = 0;
++    std::vector<int>* trace_ins_ef = nullptr;
++    std::vector<int>* trace_ins_ki = nullptr;
+     if (params) {
+         if (const SearchParametersHNSW* hnsw_params =
+                     dynamic_cast<const SearchParametersHNSW*>(params)) {
+@@ -945,6 +950,11 @@ int search_from_candidates_fixVT(
+             trace_ndis = hnsw_params->trace_ndis;
+             trace_ids = hnsw_params->trace_ids;
+             trace_k = hnsw_params->trace_k;
++            patience_p = hnsw_params->patience_p;
++            patience_s = hnsw_params->patience_s;
++            patience_queue = hnsw_params->patience_queue;
++            trace_ins_ef = hnsw_params->trace_ins_ef;
++            trace_ins_ki = hnsw_params->trace_ins_ki;
+         }
+     }
+     const float adaptive_factor =
+@@ -972,21 +982,54 @@ int search_from_candidates_fixVT(
+             std::push_heap(dk_heap.begin(), dk_heap.end());
+         }
+     };
++    // Cumulative insertion counts of the two queues Patience can watch: ins_ef for
++    // the efSearch nearest points computed so far, ins_ki for the result heap.
++    // ins_sh counts replacements in the shadow heap below; while recording it must
++    // equal ins_ki.
++    int ins_ef = 0, ins_ki = 0, ins_sh = 0;
+     // Shadow result heap for tracing: filled with the same heap functions and under
+     // the same conditions as res (HeapResultHandler<C>).
+     std::vector<float> sh_dis(tracing ? trace_k : 0);
+     std::vector<idx_t> sh_ids(tracing ? trace_k : 0);
+     if (tracing) heap_heapify<C>(trace_k, sh_dis.data(), sh_ids.data());
+     auto sh_add = [&](float dis, idx_t id) {
+-        if (tracing && C::cmp(sh_dis[0], dis))
++        if (tracing && C::cmp(sh_dis[0], dis)) {
+             heap_replace_top<C>(trace_k, sh_dis.data(), sh_ids.data(), dis, id);
++            ins_sh++;
++        }
++    };
++    // Patience. The efSearch-queue counter needs its own max-heap of the efSearch
++    // smallest distances (a point replaces the top only if strictly closer). It is
++    // kept only while Patience is on or insertion counts are recorded, so with
++    // patience_p = 0 the search costs what stock faiss costs.
++    const bool patience_on = patience_p > 0;
++    const bool keep_ins = patience_on || (tracing && trace_ins_ef);
++    const size_t ef_cap = size_t(efSearch);
++    std::vector<float> ef_heap;
++    if (keep_ins) ef_heap.reserve(ef_cap + 1);
++    auto ef_note = [&](float dis) {
++        if (ef_heap.size() < ef_cap) {
++            ef_heap.push_back(dis);
++            std::push_heap(ef_heap.begin(), ef_heap.end());
++            ins_ef++;
++        } else if (dis < ef_heap.front()) {
++            std::pop_heap(ef_heap.begin(), ef_heap.end());
++            ef_heap.back() = dis;
++            std::push_heap(ef_heap.begin(), ef_heap.end());
++            ins_ef++;
++        }
+     };
++    int pat_prev = 0, pat_count = 0;
+     auto trace_row = [&](float d0v) {
+         trace_d0->push_back(d0v);
+         trace_dk->push_back(rule_k > 0 && dk_heap.size() == rule_k ? dk_heap.front()
+                                                                    : std::nanf(""));
+         trace_ndis->push_back(ndis);
+         trace_ids->insert(trace_ids->end(), sh_ids.begin(), sh_ids.end());
++        if (trace_ins_ef) {
++            trace_ins_ef->push_back(ins_ef);
++            trace_ins_ki->push_back(ins_ki);
++        }
+     };
+ 
+     typename C::T threshold = res.threshold;
+@@ -995,10 +1038,12 @@ int search_from_candidates_fixVT(
+         float d = candidates.dis[i];
+         FAISS_ASSERT(v1 >= 0);
+         if (!sel || sel->is_member(v1)) {
++            if (keep_ins) ef_note(d);
+             if (C::cmp(threshold, d)) {
+                 sh_add(d, v1);
+                 if (res.add_result(d, v1)) {
+                     threshold = res.threshold;
++                    ins_ki++;
+                 }
+             }
+         }
+@@ -1074,11 +1119,13 @@ int search_from_candidates_fixVT(
+                 // fires more conservatively and loses less recall. This equals taking
+                 // d_k from the result heap, which holds only passing points.
+                 if (keep_dk) dk_note(dis);
++                if (keep_ins) ef_note(dis);
+                 if (C::cmp(threshold, dis)) {
+                     sh_add(dis, idx_t(idx));
+                     if (res.add_result(dis, idx)) {
+                         threshold = res.threshold;
+                         nres += 1;
++                        ins_ki++;
+                     }
+                 }
+             }
+@@ -1120,12 +1167,34 @@ int search_from_candidates_fixVT(
+         }
+ 
+         nstep++;
++
++        // Patience: once a candidate has been expanded, divide the watched
++        // queue's insertion count after the previous expansion by the current
++        // one (the counts only grow, so this is min / max), in double precision.
++        // While both are still zero the ratio is 0/0 = NaN, which does not count
++        // as saturated. The test is made before the next candidate is popped.
++        if (patience_on) {
++            const int cur = patience_queue == 1 ? ins_ki : ins_ef;
++            const double sat = double(std::min(cur, pat_prev)) / cur;
++            pat_prev = cur;
++            if (sat >= patience_s) {
++                pat_count++;
++            } else {
++                pat_count = 0;
++            }
++            if (pat_count > patience_p) {
++                break;
++            }
++        }
++
+         if (!do_dis_check && nstep > efSearch) {
+             break;
+         }
+     }
+ 
+     if (tracing) trace_row(std::nanf(""));
++    if (tracing && trace_ins_ef)
++        FAISS_THROW_IF_NOT_MSG(ins_sh == ins_ki, "result-heap insertions differ from the shadow heap");
+     if (oracle_base_ndis) *oracle_base_ndis = ndis;
+     if (level == 0) {
+         stats.n1++;
+diff --git a/faiss/impl/HNSW.h b/faiss/impl/HNSW.h
+index 42f6171..f3e350f 100644
+--- a/faiss/impl/HNSW.h
++++ b/faiss/impl/HNSW.h
+@@ -98,6 +98,28 @@ struct SearchParametersHNSW : SearchParameters {
+     std::vector<idx_t>* trace_ids = nullptr;
+     int trace_k = 0;
+ 
++    /// Queue-saturation early termination (Patience; Teofili and Lin, ECIR
++    /// 2025), bounded-queue path only. A counter tracks how many times a point
++    /// has entered the watched queue so far. After each expanded candidate the
++    /// counter is compared with its value after the previous expansion; the
++    /// expansion counts as saturated when previous / current >= patience_s.
++    /// When more than patience_p expansions in a row are saturated, the search
++    /// stops before the next candidate is popped. ORed with the other stopping
++    /// conditions. patience_p = 0 disables it and leaves faiss untouched.
++    /// patience_queue selects the watched queue:
++    ///   0 = the efSearch nearest points whose distance has been computed
++    ///       (an auxiliary max-heap; the queue is the beam),
++    ///   1 = the result heap (a point enters when res.add_result accepts it).
++    int patience_p = 0;
++    double patience_s = 0.995;
++    int patience_queue = 0;
++
++    /// Insertion counts for Patience replay (measurement only). If these and
++    /// trace_d0 are non-null, every trace row also records the cumulative
++    /// number of insertions into the two queues above at that point.
++    std::vector<int>* trace_ins_ef = nullptr;
++    std::vector<int>* trace_ins_ki = nullptr;
++
+ 
+     ~SearchParametersHNSW() {}
+ };

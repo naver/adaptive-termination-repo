@@ -1,0 +1,187 @@
+{
+ "description": "Share (%) of shard searches that ran to the ef limit (the rule never fired), per query group; the text quotes the ranges for easy (perfect) and hard (low) queries. Groups by the query's recall under fixed ef: perfect = 1.0, mid = (0.7, 1.0), low = <= 0.7. Test blocks a+b (T2I 20,000 queries, MS MARCO 6,480).",
+ "source": "Extracted from the results tables printed by the original report script with the same computation as figures/data.py:cap_share on the per-query dumps (dumps/ + shard/, not shipped). Values are rounded to 2 decimals (percentage points); group sizes are exact.",
+ "rounding_pct": 0.005,
+ "cells": [
+  {
+   "dataset": "t2i_N10000000",
+   "S": 1,
+   "ef": 200,
+   "ef_limit_share_pct": {
+    "perfect": 41.59,
+    "mid": 76.21,
+    "low": 95.45
+   },
+   "group_size": {
+    "perfect": 10982,
+    "mid": 7305,
+    "low": 1713
+   }
+  },
+  {
+   "dataset": "t2i_N10000000",
+   "S": 1,
+   "ef": 300,
+   "ef_limit_share_pct": {
+    "perfect": 26.04,
+    "mid": 61.87,
+    "low": 90.44
+   },
+   "group_size": {
+    "perfect": 12894,
+    "mid": 5987,
+    "low": 1119
+   }
+  },
+  {
+   "dataset": "t2i_N10000000",
+   "S": 5,
+   "ef": 200,
+   "ef_limit_share_pct": {
+    "perfect": 24.11,
+    "mid": 64.32,
+    "low": 79.38
+   },
+   "group_size": {
+    "perfect": 14971,
+    "mid": 4165,
+    "low": 864
+   }
+  },
+  {
+   "dataset": "t2i_N10000000",
+   "S": 5,
+   "ef": 300,
+   "ef_limit_share_pct": {
+    "perfect": 19.89,
+    "mid": 60.57,
+    "low": 76.66
+   },
+   "group_size": {
+    "perfect": 16406,
+    "mid": 3014,
+    "low": 580
+   }
+  },
+  {
+   "dataset": "t2i_N10000000",
+   "S": 15,
+   "ef": 200,
+   "ef_limit_share_pct": {
+    "perfect": 20.7,
+    "mid": 62.02,
+    "low": 80.09
+   },
+   "group_size": {
+    "perfect": 16989,
+    "mid": 2550,
+    "low": 461
+   }
+  },
+  {
+   "dataset": "t2i_N10000000",
+   "S": 15,
+   "ef": 300,
+   "ef_limit_share_pct": {
+    "perfect": 14.93,
+    "mid": 56.97,
+    "low": 77.75
+   },
+   "group_size": {
+    "perfect": 17991,
+    "mid": 1718,
+    "low": 291
+   }
+  },
+  {
+   "dataset": "msmarco_N8841823",
+   "S": 1,
+   "ef": 200,
+   "ef_limit_share_pct": {
+    "perfect": 2.03,
+    "mid": 22.54,
+    "low": 58.39
+   },
+   "group_size": {
+    "perfect": 5509,
+    "mid": 834,
+    "low": 137
+   }
+  },
+  {
+   "dataset": "msmarco_N8841823",
+   "S": 1,
+   "ef": 300,
+   "ef_limit_share_pct": {
+    "perfect": 2.58,
+    "mid": 24.54,
+    "low": 61.9
+   },
+   "group_size": {
+    "perfect": 5617,
+    "mid": 758,
+    "low": 105
+   }
+  },
+  {
+   "dataset": "msmarco_N8841823",
+   "S": 5,
+   "ef": 200,
+   "ef_limit_share_pct": {
+    "perfect": 1.29,
+    "mid": 17.8,
+    "low": 42.45
+   },
+   "group_size": {
+    "perfect": 5565,
+    "mid": 809,
+    "low": 106
+   }
+  },
+  {
+   "dataset": "msmarco_N8841823",
+   "S": 5,
+   "ef": 300,
+   "ef_limit_share_pct": {
+    "perfect": 0.85,
+    "mid": 12.95,
+    "low": 42.99
+   },
+   "group_size": {
+    "perfect": 5698,
+    "mid": 715,
+    "low": 67
+   }
+  },
+  {
+   "dataset": "msmarco_N8841823",
+   "S": 15,
+   "ef": 200,
+   "ef_limit_share_pct": {
+    "perfect": 2.6,
+    "mid": 26.09,
+    "low": 61.89
+   },
+   "group_size": {
+    "perfect": 5696,
+    "mid": 731,
+    "low": 53
+   }
+  },
+  {
+   "dataset": "msmarco_N8841823",
+   "S": 15,
+   "ef": 300,
+   "ef_limit_share_pct": {
+    "perfect": 1.71,
+    "mid": 20.87,
+    "low": 59.79
+   },
+   "group_size": {
+    "perfect": 5832,
+    "mid": 616,
+    "low": 32
+   }
+  }
+ ]
+}

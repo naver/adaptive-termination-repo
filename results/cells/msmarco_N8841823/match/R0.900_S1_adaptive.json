@@ -1,0 +1,143 @@
+{
+ "S": 1,
+ "R": 0.9,
+ "E": 48,
+ "gamma": "0.00539",
+ "recall": 0.90005,
+ "ndis": 849.7,
+ "over": 5e-05,
+ "candidates": [
+  {
+   "ef": 32,
+   "feasible": true,
+   "gamma": "0.00602",
+   "recall": 0.9000000000000016,
+   "ndis": 854.687,
+   "fixed_end": {
+    "recall": 0.918200000000001,
+    "ndis": 1023.989
+   }
+  },
+  {
+   "ef": 48,
+   "feasible": true,
+   "gamma": "0.00539",
+   "recall": 0.9000500000000013,
+   "ndis": 849.743,
+   "fixed_end": {
+    "recall": 0.939650000000002,
+    "ndis": 1325.292
+   }
+  },
+  {
+   "ef": 64,
+   "feasible": true,
+   "gamma": "0.00539",
+   "recall": 0.9000500000000013,
+   "ndis": 849.797,
+   "fixed_end": {
+    "recall": 0.9503000000000023,
+    "ndis": 1615.48
+   }
+  },
+  {
+   "ef": 100,
+   "feasible": true,
+   "gamma": "0.00539",
+   "recall": 0.9000500000000013,
+   "ndis": 849.797,
+   "fixed_end": {
+    "recall": 0.9603000000000012,
+    "ndis": 2249.683
+   }
+  },
+  {
+   "ef": 150,
+   "feasible": true,
+   "gamma": "0.00539",
+   "recall": 0.9000500000000013,
+   "ndis": 849.797,
+   "fixed_end": {
+    "recall": 0.968450000000001,
+    "ndis": 3089.853
+   }
+  },
+  {
+   "ef": 200,
+   "feasible": true,
+   "gamma": "0.00539",
+   "recall": 0.9000500000000013,
+   "ndis": 849.797,
+   "fixed_end": {
+    "recall": 0.9722000000000007,
+    "ndis": 3897.445
+   }
+  },
+  {
+   "ef": 300,
+   "feasible": true,
+   "gamma": "0.00539",
+   "recall": 0.9000500000000013,
+   "ndis": 849.797,
+   "fixed_end": {
+    "recall": 0.9762000000000008,
+    "ndis": 5458.332
+   }
+  },
+  {
+   "ef": 400,
+   "feasible": true,
+   "gamma": "0.00539",
+   "recall": 0.9000500000000013,
+   "ndis": 849.797,
+   "fixed_end": {
+    "recall": 0.9803000000000003,
+    "ndis": 6967.405
+   }
+  },
+  {
+   "ef": 600,
+   "feasible": true,
+   "gamma": "0.00539",
+   "recall": 0.9000500000000013,
+   "ndis": 849.797,
+   "fixed_end": {
+    "recall": 0.984,
+    "ndis": 9854.128
+   }
+  },
+  {
+   "ef": 800,
+   "feasible": true,
+   "gamma": "0.00539",
+   "recall": 0.9000500000000013,
+   "ndis": 849.797,
+   "fixed_end": {
+    "recall": 0.9854,
+    "ndis": 12617.2
+   }
+  },
+  {
+   "ef": 1200,
+   "feasible": true,
+   "gamma": "0.00539",
+   "recall": 0.9000500000000013,
+   "ndis": 849.797,
+   "fixed_end": {
+    "recall": 0.9879000000000002,
+    "ndis": 17908.993
+   }
+  },
+  {
+   "ef": 1600,
+   "feasible": true,
+   "gamma": "0.00539",
+   "recall": 0.9000500000000013,
+   "ndis": 849.797,
+   "fixed_end": {
+    "recall": 0.9893000000000003,
+    "ndis": 22960.8
+   }
+  }
+ ]
+}

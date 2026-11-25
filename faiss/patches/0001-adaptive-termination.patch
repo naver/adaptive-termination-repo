@@ -1,0 +1,411 @@
+Copyright (c) Meta Platforms, Inc. and affiliates. MIT License (full text in NOTICE).
+Modified from: https://github.com/facebookresearch/faiss v1.15.0 (faiss/impl/HNSW.cpp, faiss/impl/HNSW.h)
+Modified by NAVER Corp.: adaptive termination of the HNSW base-layer search and oracle instrumentation.
+License: the Faiss lines in this diff remain under the MIT License; NAVER's modifications are
+  Copyright (c) 2026-present NAVER Corp. and licensed under CC BY-NC-SA 4.0 (see LICENSE).
+
+Adaptive termination for the HNSW base-layer search, plus oracle instrumentation.
+
+Base:   facebookresearch/faiss v1.15.0 (commit 20f14b31a6d54e243a3d1de6ae193fc4c3ec18ed)
+Apply:  cd faiss && git apply 0001-adaptive-termination.patch   (then 0002-traversal-trace.patch, 0003-patience.patch)
+Build:  faiss/build_faiss.sh (FAISS_OPT_LEVEL=avx512 for the paper); bench/build_bench.sh links one variant only.
+
+The patch contains four parts.
+
+(1) Adaptive termination. SearchParametersHNSW gains adaptive_gamma and adaptive_k. The base-layer
+    loop stops when frontier > (1+gamma)^2 * d_{k_rule} (squared because faiss L2 distances are
+    squared). gamma = 0 leaves stock faiss behaviour. When k_rule > k the result heap cannot supply
+    d_{k_rule}, so an auxiliary max-heap of the k_rule smallest distances is kept (only while the
+    rule is on).
+
+(2) Oracle instrumentation. Records the cumulative base-layer ndis at the moment each target id
+    enters the result heap. A true top-K point is never evicted once it enters, so the arrival time
+    of the last true neighbour is obtained without re-running the search. Leaving the pointers null
+    has no effect. To make the recorded ndis include the distance just computed, the "ndis += ..."
+    increments are moved before add_to_heap (ndis is only a counter, so search behaviour is unchanged).
+
+(3) d_k is taken over points that pass the filter (IDSelector), as it is when d_k is read from the
+    result heap. Without a filter this is identical. With a filter, the narrower the filter, the
+    more conservatively the rule fires.
+
+(4) Filtered search on the unbounded-queue path. Stock v1.15.0 does not pass the selector to this
+    path at all, and on the bounded path termination does not depend on the filter, so filtering
+    leaves the work unchanged and only recall drops. To get hnswlib-style filtered search both are
+    needed:
+      (a) selector wiring: navigation (candidates) is unconditional, only results (top_candidates)
+          are filtered;
+      (b) termination additionally requires top_candidates.size() >= ef: do not stop before the
+          result heap is full.
+    (a) alone gives the opposite behaviour: with few passing points the "worst" result is close,
+    the search stops at once, and a narrower filter does less work. The two go together. Adaptive
+    termination and oracle instrumentation are ported to this path too.
+
+(3) and (4) do not change unfiltered search, which is all the paper's experiments use
+(bounded queue, no filter).
+
+diff --git a/faiss/impl/HNSW.cpp b/faiss/impl/HNSW.cpp
+index 96af4e1..6946552 100644
+--- a/faiss/impl/HNSW.cpp
++++ b/faiss/impl/HNSW.cpp
+@@ -7,6 +7,9 @@
+ 
+ #include <faiss/impl/HNSW.h>
+ 
++#include <algorithm>
++#include <cmath>
++
+ #include <array>
+ #include <cinttypes>
+ #include <cstddef>
+@@ -915,6 +918,47 @@ int search_from_candidates_fixVT(
+ 
+     vt.reserve(efSearch);
+ 
++    // Adaptive termination. The caller passes gamma and the rank k_rule that the
++    // rule compares against. gamma = 0 keeps stock faiss behaviour.
++    float adaptive_gamma = 0.0f;
++    int adaptive_k = 0;
++    const std::unordered_set<idx_t>* oracle_targets = nullptr;
++    std::vector<int>* oracle_hit_ids = nullptr;
++    std::vector<int>* oracle_hit_ndis = nullptr;
++    int* oracle_base_ndis = nullptr;
++    if (params) {
++        if (const SearchParametersHNSW* hnsw_params =
++                    dynamic_cast<const SearchParametersHNSW*>(params)) {
++            adaptive_gamma = hnsw_params->adaptive_gamma;
++            adaptive_k = hnsw_params->adaptive_k;
++            oracle_targets = hnsw_params->oracle_targets;
++            oracle_hit_ids = hnsw_params->oracle_hit_ids;
++            oracle_hit_ndis = hnsw_params->oracle_hit_ndis;
++            oracle_base_ndis = hnsw_params->oracle_base_ndis;
++        }
++    }
++    const float adaptive_factor =
++            (1.0f + adaptive_gamma) * (1.0f + adaptive_gamma);
++    // The result heap holds only k entries, so when k_rule > k it cannot give
++    // d_{k_rule}. Keep the k_rule smallest distances measured in a max-heap whose
++    // top is exactly d_{k_rule}. Not maintained while the rule is off, so the
++    // fixed-ef arm stays stock faiss -- and maintaining it is precisely the cost
++    // the overhead arm (gamma too large ever to fire) is there to isolate.
++    const size_t rule_k = adaptive_k > 0 ? size_t(adaptive_k) : size_t(0);
++    std::vector<float> dk_heap;
++    if (adaptive_gamma > 0.0f && rule_k > 0) dk_heap.reserve(rule_k + 1);
++    auto dk_note = [&](float dis) {
++        if (rule_k == 0) return;
++        if (dk_heap.size() < rule_k) {
++            dk_heap.push_back(dis);
++            std::push_heap(dk_heap.begin(), dk_heap.end());
++        } else if (dis < dk_heap.front()) {
++            std::pop_heap(dk_heap.begin(), dk_heap.end());
++            dk_heap.back() = dis;
++            std::push_heap(dk_heap.begin(), dk_heap.end());
++        }
++    };
++
+     typename C::T threshold = res.threshold;
+     for (int i = 0; i < candidates.size(); i++) {
+         idx_t v1 = candidates.ids[i];
+@@ -927,6 +971,11 @@ int search_from_candidates_fixVT(
+                 }
+             }
+         }
++        if (adaptive_gamma > 0.0f) dk_note(d);
++        if (oracle_targets && oracle_targets->count(v1)) {
++            oracle_hit_ids->push_back(int(v1));
++            oracle_hit_ndis->push_back(0);
++        }
+         vt.set(v1);
+     }
+ 
+@@ -936,11 +985,24 @@ int search_from_candidates_fixVT(
+         float d0 = 0;
+         int v0 = candidates.pop_min(&d0);
+ 
+-        if (do_dis_check) {
+-            // tricky stopping condition: there are more that ef
+-            // distances that are processed already that are smaller
+-            // than d0
++        // Adaptive termination: d0 is the nearest candidate not yet expanded --
++        // the frontier. ORed with the stock condition below, never replacing it.
++        if (adaptive_gamma > 0.0f) {
++            // With rule_k set, d_{k_rule} is the auxiliary heap's top. Without it,
++            // fall back to the result heap's k-th, which sits at C::neutral() until
++            // the heap holds k real results -- hence the isfinite guard.
++            const bool have = rule_k > 0 ? (dk_heap.size() == rule_k)
++                                         : std::isfinite(static_cast<float>(res.threshold));
++            const float dk = rule_k > 0 ? dk_heap.front() : static_cast<float>(res.threshold);
++            if (have && d0 > adaptive_factor * dk) {
++                break;
++            }
++        }
+ 
++        if (do_dis_check) {
++            // Stock faiss condition, based on candidate-queue statistics. It ignores
++            // the filter: it stops at the same point however many results pass.
++            // Search depth is set by ef alone (the candidate-queue capacity).
+             int n_dis_below = candidates.count_below(d0);
+             if (n_dis_below >= efSearch) {
+                 break;
+@@ -969,7 +1031,17 @@ int search_from_candidates_fixVT(
+         threshold = res.threshold;
+ 
+         auto add_to_heap = [&](const size_t idx, const float dis) {
++            if (oracle_targets && oracle_targets->count(idx_t(idx))) {
++                oracle_hit_ids->push_back(int(idx));
++                oracle_hit_ndis->push_back(ndis);
++            }
+             if (!sel || sel->is_member(idx)) {
++                // d_k is taken over points that pass the filter. With a filter the
++                // passing points lie farther away, so d_k grows while the frontier
++                // still comes from all points; the ratio grows more slowly, the rule
++                // fires more conservatively and loses less recall. This equals taking
++                // d_k from the result heap, which holds only passing points.
++                if (adaptive_gamma > 0.0f) dk_note(dis);
+                 if (C::cmp(threshold, dis)) {
+                     if (res.add_result(dis, idx)) {
+                         threshold = res.threshold;
+@@ -998,21 +1070,20 @@ int search_from_candidates_fixVT(
+                         dis[2],
+                         dis[3]);
+ 
++                ndis += 4;
++
+                 for (size_t id4 = 0; id4 < 4; id4++) {
+                     add_to_heap(saved_j[id4], dis[id4]);
+                 }
+ 
+-                ndis += 4;
+-
+                 counter = 0;
+             }
+         }
+ 
+         for (int icnt = 0; icnt < counter; icnt++) {
+             float dis = qdis(saved_j[icnt]);
+-            add_to_heap(saved_j[icnt], dis);
+-
+             ndis += 1;
++            add_to_heap(saved_j[icnt], dis);
+         }
+ 
+         nstep++;
+@@ -1021,6 +1092,7 @@ int search_from_candidates_fixVT(
+         }
+     }
+ 
++    if (oracle_base_ndis) *oracle_base_ndis = ndis;
+     if (level == 0) {
+         stats.n1++;
+         if (candidates.size() == 0) {
+@@ -1317,15 +1389,58 @@ TopCandidatesQueue<C> search_from_candidate_unbounded_fixVT(
+         DistanceComputer& qdis,
+         int ef,
+         VTType& vt,
+-        HNSWStats& stats) {
++        HNSWStats& stats,
++        // Filter wiring for the unbounded path: stock faiss does not pass the
++        // selector here, so the result heap fills unfiltered and is filtered
++        // afterwards. nullptr behaves as stock faiss.
++        const IDSelector* sel = nullptr,
++        const SearchParameters* params = nullptr) {
+     int ndis = 0;
++
++    // Adaptive termination + oracle instrumentation on the unbounded path, with the
++    // same semantics as on the bounded path.
++    float adaptive_gamma = 0.0f;
++    int adaptive_k = 0;
++    const std::unordered_set<idx_t>* oracle_targets = nullptr;
++    std::vector<int>* oracle_hit_ids = nullptr;
++    std::vector<int>* oracle_hit_ndis = nullptr;
++    int* oracle_base_ndis = nullptr;
++    if (params) {
++        if (const SearchParametersHNSW* hp =
++                    dynamic_cast<const SearchParametersHNSW*>(params)) {
++            adaptive_gamma = hp->adaptive_gamma;
++            adaptive_k = hp->adaptive_k;
++            oracle_targets = hp->oracle_targets;
++            oracle_hit_ids = hp->oracle_hit_ids;
++            oracle_hit_ndis = hp->oracle_hit_ndis;
++            oracle_base_ndis = hp->oracle_base_ndis;
++        }
++    }
++    const float adaptive_factor =
++            (1.0f + adaptive_gamma) * (1.0f + adaptive_gamma);
++    const size_t rule_k = adaptive_k > 0 ? size_t(adaptive_k) : size_t(0);
++    std::vector<float> dk_heap;
++    if (adaptive_gamma > 0.0f && rule_k > 0) dk_heap.reserve(rule_k + 1);
++    auto dk_note = [&](float dis) {
++        if (rule_k == 0) return;
++        if (dk_heap.size() < rule_k) {
++            dk_heap.push_back(dis);
++            std::push_heap(dk_heap.begin(), dk_heap.end());
++        } else if (dis < dk_heap.front()) {
++            std::pop_heap(dk_heap.begin(), dk_heap.end());
++            dk_heap.back() = dis;
++            std::push_heap(dk_heap.begin(), dk_heap.end());
++        }
++    };
+     TopCandidatesQueue<C> top_candidates;
+     reservePriorityQueue(top_candidates, ef);
+ 
+     CandidatesQueue<C> candidates;
+     reservePriorityQueue(candidates, ef);
+ 
+-    top_candidates.push(node);
++    // The entry point enters the results only if it passes the filter; it is
++    // always used for navigation.
++    if (!sel || sel->is_member(node.second)) top_candidates.push(node);
+     candidates.push(node);
+ 
+     vt.set(node.second);
+@@ -1335,7 +1450,20 @@ TopCandidatesQueue<C> search_from_candidate_unbounded_fixVT(
+         storage_idx_t v0;
+         std::tie(d0, v0) = candidates.top();
+ 
+-        if (C::cmp(d0, top_candidates.top().first)) {
++        // Adaptive termination: stop when the frontier exceeds (1+gamma)^2 * d_{k_rule}.
++        // d_k is taken over points that pass the filter.
++        if (adaptive_gamma > 0.0f && rule_k > 0 && dk_heap.size() == rule_k &&
++            d0 > adaptive_factor * dk_heap.front()) {
++            break;
++        }
++
++        // Do not stop before the result heap is full (hnswlib semantics). With a
++        // filter the result heap fills slowly, so the search goes deeper. Without
++        // this check the "worst" result is close when few points pass, the search
++        // stops at once, and a narrower filter does less work -- the opposite of
++        // the intended behaviour.
++        if (top_candidates.size() >= static_cast<size_t>(ef) &&
++            C::cmp(d0, top_candidates.top().first)) {
+             break;
+         }
+ 
+@@ -1361,13 +1489,24 @@ TopCandidatesQueue<C> search_from_candidate_unbounded_fixVT(
+         size_t saved_j[4];
+ 
+         auto add_to_heap = [&](const size_t idx, const float dis) {
+-            if (C::cmp(top_candidates.top().first, dis) ||
+-                top_candidates.size() < static_cast<size_t>(ef)) {
++            // hnswlib structure: navigation (candidates) is unconditional, results
++            // (top_candidates) go through the filter. When passing points are rare,
++            // top_candidates stays below ef, the entry condition stays true and the
++            // search goes deeper -- a narrower filter does more work. size() is
++            // checked first so that top() is never called on an empty heap.
++            if (top_candidates.size() < static_cast<size_t>(ef) ||
++                C::cmp(top_candidates.top().first, dis)) {
+                 candidates.emplace(dis, idx);
+-                top_candidates.emplace(dis, idx);
+-
+-                if (top_candidates.size() > static_cast<size_t>(ef)) {
+-                    top_candidates.pop();
++                if (!sel || sel->is_member(idx)) {
++                    if (adaptive_gamma > 0.0f) dk_note(dis);
++                    if (oracle_targets && oracle_targets->count(idx_t(idx))) {
++                        oracle_hit_ids->push_back(int(idx));
++                        oracle_hit_ndis->push_back(ndis);
++                    }
++                    top_candidates.emplace(dis, idx);
++                    if (top_candidates.size() > static_cast<size_t>(ef)) {
++                        top_candidates.pop();
++                    }
+                 }
+             }
+         };
+@@ -1390,21 +1529,20 @@ TopCandidatesQueue<C> search_from_candidate_unbounded_fixVT(
+                         dis[2],
+                         dis[3]);
+ 
++                ndis += 4;
++
+                 for (size_t id4 = 0; id4 < 4; id4++) {
+                     add_to_heap(saved_j[id4], dis[id4]);
+                 }
+ 
+-                ndis += 4;
+-
+                 counter = 0;
+             }
+         }
+ 
+         for (int icnt = 0; icnt < counter; icnt++) {
+             float dis = qdis(saved_j[icnt]);
+-            add_to_heap(saved_j[icnt], dis);
+-
+             ndis += 1;
++            add_to_heap(saved_j[icnt], dis);
+         }
+ 
+         stats.nhops += 1;
+@@ -1414,6 +1552,7 @@ TopCandidatesQueue<C> search_from_candidate_unbounded_fixVT(
+     if (candidates.size() == 0) {
+         ++stats.n2;
+     }
++    if (oracle_base_ndis) *oracle_base_ndis = ndis;
+     stats.ndis += ndis;
+ 
+     return top_candidates;
+@@ -1522,6 +1661,7 @@ HNSWStats search_impl(
+             }
+         }
+     } else {
++        const IDSelector* ub_sel = params ? params->sel : nullptr;
+         auto call = [&]<typename VTType>(VTType& vt_concrete) {
+             return search_from_candidate_unbounded_fixVT<VTType, C>(
+                     hnsw,
+@@ -1529,7 +1669,9 @@ HNSWStats search_impl(
+                     qdis,
+                     ef,
+                     vt_concrete,
+-                    stats);
++                    stats,
++                    ub_sel,
++                    params);
+         };
+         TopCandidatesQueue<C> top_candidates;
+         if (VisitedTableVector* vtv = dynamic_cast<VisitedTableVector*>(&vt)) {
+diff --git a/faiss/impl/HNSW.h b/faiss/impl/HNSW.h
+index 84af3d9..84dd6a8 100644
+--- a/faiss/impl/HNSW.h
++++ b/faiss/impl/HNSW.h
+@@ -9,6 +9,7 @@
+ 
+ #include <optional>
+ #include <queue>
++#include <unordered_set>
+ #include <vector>
+ 
+ #include <omp.h>
+@@ -55,6 +56,33 @@ struct SearchParametersHNSW : SearchParameters {
+     bool check_relative_distance = true;
+     bool bounded_queue = true;
+ 
++    /// Adaptive termination. Stop the base-layer beam search as soon as the
++    /// frontier -- the nearest candidate not yet expanded -- is (1+gamma)^2 times
++    /// farther than the k_rule-th best result found so far. Squared because faiss
++    /// L2 distances are squared. 0 disables the rule and leaves faiss untouched.
++    float adaptive_gamma = 0.0f;
++
++    /// Which rank (k_rule) the rule compares against. 0 means the query k.
++    ///
++    /// k_rule may differ from the query k, e.g. a shard that returns k_i results
++    /// can compare against d_K with K > k_i. A larger k_rule raises the threshold,
++    /// so the rule fires later and gives up less recall.
++    ///
++    /// The result heap holds only k entries, so k_rule > k needs its own structure;
++    /// see the auxiliary heap in search_from_candidates_fixVT.
++    int adaptive_k = 0;
++
++    /// Oracle instrumentation (measurement only; leaving these null has no effect
++    /// on faiss behaviour). Each time an id in oracle_targets enters the result
++    /// heap, record the id and the cumulative base-layer distance-computation
++    /// count, in arrival order. The caller decides which ids survived in the final
++    /// result, so points that entered and were later evicted are recorded too.
++    const std::unordered_set<idx_t>* oracle_targets = nullptr;
++    std::vector<int>* oracle_hit_ids = nullptr;    // output
++    std::vector<int>* oracle_hit_ndis = nullptr;   // output
++    int* oracle_base_ndis = nullptr;               // output: total base-layer ndis (to separate the upper-layer share)
++
++
+     ~SearchParametersHNSW() {}
+ };
+ 

@@ -1,0 +1,153 @@
+Copyright (c) Meta Platforms, Inc. and affiliates. MIT License (full text in NOTICE).
+Modified from: https://github.com/facebookresearch/faiss v1.15.0 (faiss/impl/HNSW.cpp, faiss/impl/HNSW.h)
+Modified by NAVER Corp.: traversal trace recording for gamma replay.
+License: the Faiss lines in this diff remain under the MIT License; NAVER's modifications are
+  Copyright (c) 2026-present NAVER Corp. and licensed under CC BY-NC-SA 4.0 (see LICENSE).
+
+Traversal record for gamma replay (measurement only, bounded-queue path only). Apply after 0001.
+
+SearchParametersHNSW gains trace_d0 / trace_dk / trace_ndis / trace_ids / trace_k. If trace_d0 is
+non-null, every base-layer candidate pop appends one row: the frontier d0, d_{k_rule} at that point
+(NaN while the auxiliary heap is not yet full), the cumulative base-layer ndis, and the trace_k ids
+of the result heap at that point; one final row with d0 = NaN is appended when the loop exits.
+
+The termination rule only decides when to stop, so a search run with gamma equals the gamma = 0
+search cut at the first pop where the rule fires. A single gamma = 0 run per query therefore lets
+any gamma be replayed offline. The result heap is an abstract handler and cannot be read, so a
+shadow heap is maintained with the same faiss heap functions (identical including tie order).
+While tracing, the auxiliary d_{k_rule} heap is maintained even at gamma = 0; it is passive, so the
+search path is unchanged.
+
+diff --git a/faiss/impl/HNSW.cpp b/faiss/impl/HNSW.cpp
+index 6946552..1684460 100644
+--- a/faiss/impl/HNSW.cpp
++++ b/faiss/impl/HNSW.cpp
+@@ -926,6 +926,11 @@ int search_from_candidates_fixVT(
+     std::vector<int>* oracle_hit_ids = nullptr;
+     std::vector<int>* oracle_hit_ndis = nullptr;
+     int* oracle_base_ndis = nullptr;
++    std::vector<float>* trace_d0 = nullptr;
++    std::vector<float>* trace_dk = nullptr;
++    std::vector<int>* trace_ndis = nullptr;
++    std::vector<idx_t>* trace_ids = nullptr;
++    int trace_k = 0;
+     if (params) {
+         if (const SearchParametersHNSW* hnsw_params =
+                     dynamic_cast<const SearchParametersHNSW*>(params)) {
+@@ -935,6 +940,11 @@ int search_from_candidates_fixVT(
+             oracle_hit_ids = hnsw_params->oracle_hit_ids;
+             oracle_hit_ndis = hnsw_params->oracle_hit_ndis;
+             oracle_base_ndis = hnsw_params->oracle_base_ndis;
++            trace_d0 = hnsw_params->trace_d0;
++            trace_dk = hnsw_params->trace_dk;
++            trace_ndis = hnsw_params->trace_ndis;
++            trace_ids = hnsw_params->trace_ids;
++            trace_k = hnsw_params->trace_k;
+         }
+     }
+     const float adaptive_factor =
+@@ -946,7 +956,11 @@ int search_from_candidates_fixVT(
+     // the overhead arm (gamma too large ever to fire) is there to isolate.
+     const size_t rule_k = adaptive_k > 0 ? size_t(adaptive_k) : size_t(0);
+     std::vector<float> dk_heap;
+-    if (adaptive_gamma > 0.0f && rule_k > 0) dk_heap.reserve(rule_k + 1);
++    // When tracing, keep the auxiliary heap even at gamma = 0. It is passive, so
++    // the search path is unchanged.
++    const bool tracing = trace_d0 != nullptr;
++    const bool keep_dk = adaptive_gamma > 0.0f || tracing;
++    if (keep_dk && rule_k > 0) dk_heap.reserve(rule_k + 1);
+     auto dk_note = [&](float dis) {
+         if (rule_k == 0) return;
+         if (dk_heap.size() < rule_k) {
+@@ -958,6 +972,22 @@ int search_from_candidates_fixVT(
+             std::push_heap(dk_heap.begin(), dk_heap.end());
+         }
+     };
++    // Shadow result heap for tracing: filled with the same heap functions and under
++    // the same conditions as res (HeapResultHandler<C>).
++    std::vector<float> sh_dis(tracing ? trace_k : 0);
++    std::vector<idx_t> sh_ids(tracing ? trace_k : 0);
++    if (tracing) heap_heapify<C>(trace_k, sh_dis.data(), sh_ids.data());
++    auto sh_add = [&](float dis, idx_t id) {
++        if (tracing && C::cmp(sh_dis[0], dis))
++            heap_replace_top<C>(trace_k, sh_dis.data(), sh_ids.data(), dis, id);
++    };
++    auto trace_row = [&](float d0v) {
++        trace_d0->push_back(d0v);
++        trace_dk->push_back(rule_k > 0 && dk_heap.size() == rule_k ? dk_heap.front()
++                                                                   : std::nanf(""));
++        trace_ndis->push_back(ndis);
++        trace_ids->insert(trace_ids->end(), sh_ids.begin(), sh_ids.end());
++    };
+ 
+     typename C::T threshold = res.threshold;
+     for (int i = 0; i < candidates.size(); i++) {
+@@ -966,12 +996,13 @@ int search_from_candidates_fixVT(
+         FAISS_ASSERT(v1 >= 0);
+         if (!sel || sel->is_member(v1)) {
+             if (C::cmp(threshold, d)) {
++                sh_add(d, v1);
+                 if (res.add_result(d, v1)) {
+                     threshold = res.threshold;
+                 }
+             }
+         }
+-        if (adaptive_gamma > 0.0f) dk_note(d);
++        if (keep_dk) dk_note(d);
+         if (oracle_targets && oracle_targets->count(v1)) {
+             oracle_hit_ids->push_back(int(v1));
+             oracle_hit_ndis->push_back(0);
+@@ -984,6 +1015,7 @@ int search_from_candidates_fixVT(
+     while (candidates.size() > 0) {
+         float d0 = 0;
+         int v0 = candidates.pop_min(&d0);
++        if (tracing) trace_row(d0);
+ 
+         // Adaptive termination: d0 is the nearest candidate not yet expanded --
+         // the frontier. ORed with the stock condition below, never replacing it.
+@@ -1041,8 +1073,9 @@ int search_from_candidates_fixVT(
+                 // still comes from all points; the ratio grows more slowly, the rule
+                 // fires more conservatively and loses less recall. This equals taking
+                 // d_k from the result heap, which holds only passing points.
+-                if (adaptive_gamma > 0.0f) dk_note(dis);
++                if (keep_dk) dk_note(dis);
+                 if (C::cmp(threshold, dis)) {
++                    sh_add(dis, idx_t(idx));
+                     if (res.add_result(dis, idx)) {
+                         threshold = res.threshold;
+                         nres += 1;
+@@ -1092,6 +1125,7 @@ int search_from_candidates_fixVT(
+         }
+     }
+ 
++    if (tracing) trace_row(std::nanf(""));
+     if (oracle_base_ndis) *oracle_base_ndis = ndis;
+     if (level == 0) {
+         stats.n1++;
+diff --git a/faiss/impl/HNSW.h b/faiss/impl/HNSW.h
+index 84dd6a8..42f6171 100644
+--- a/faiss/impl/HNSW.h
++++ b/faiss/impl/HNSW.h
+@@ -82,6 +82,22 @@ struct SearchParametersHNSW : SearchParameters {
+     std::vector<int>* oracle_hit_ndis = nullptr;   // output
+     int* oracle_base_ndis = nullptr;               // output: total base-layer ndis (to separate the upper-layer share)
+ 
++    /// Traversal record for gamma replay (measurement only, bounded path only).
++    /// If trace_d0 is non-null, every base-layer candidate pop appends one row:
++    /// (frontier d0, d_{k_rule} at that point -- NaN while the auxiliary heap is
++    /// not full --, cumulative base-layer ndis, the trace_k ids in the result heap
++    /// at that point). On leaving the loop one final row with d0 = NaN is added.
++    /// The rule only decides when to stop, so a search with gamma equals the
++    /// gamma = 0 search cut at the first pop where the rule fires. The result heap
++    /// is an abstract handler and cannot be read, so a shadow heap is maintained
++    /// alongside with the same faiss heap functions (identical even in tie order).
++    /// The search path is not changed.
++    std::vector<float>* trace_d0 = nullptr;
++    std::vector<float>* trace_dk = nullptr;
++    std::vector<int>* trace_ndis = nullptr;
++    std::vector<idx_t>* trace_ids = nullptr;
++    int trace_k = 0;
++
+ 
+     ~SearchParametersHNSW() {}
+ };

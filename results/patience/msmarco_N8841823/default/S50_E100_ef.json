@@ -1,0 +1,47 @@
+{
+ "ds": "msmarco",
+ "S": 50,
+ "E": 100,
+ "queue": "ef",
+ "k": 100,
+ "p": 30,
+ "s": "0.995",
+ "recall": 0.98005,
+ "ndis": 114717.7,
+ "direct_same": true,
+ "fixed_at_E": {
+  "recall": 0.9830000000000007,
+  "ndis": 134019.33
+ },
+ "ratio_same_ef": 0.8559787606757921,
+ "bootstrap": {
+  "nq": 1000,
+  "delta_pp": -0.295,
+  "delta_ci": [
+   -0.39,
+   -0.21
+  ],
+  "p_violate": 0.0,
+  "verdict": "within",
+  "n_needed": 17,
+  "ndis_ratio": 0.856,
+  "ndis_ci": [
+   0.8518,
+   0.86
+  ]
+ },
+ "fixed_matched": {
+  "ef": 84,
+  "recall": 0.9805,
+  "ndis": 116938.2,
+  "src": "direct",
+  "probes": {
+   "88": 0.98075,
+   "86": 0.9807,
+   "84": 0.9805,
+   "83": 0.98005
+  },
+  "ndis_at_target": 116938.2
+ },
+ "ratio_same_recall": 0.9810113376125167
+}

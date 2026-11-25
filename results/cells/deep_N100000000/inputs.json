@@ -1,0 +1,43 @@
+{
+ "raw": {
+  "base.fbin": {
+   "md5": "b4ad3b5fe5473a3495cea80227ff21a2",
+   "bytes": 38400000008
+  },
+  "query.fbin": {
+   "md5": "369d06140c8db325bdb62d621dfa2a67",
+   "bytes": 3840008
+  }
+ },
+ "ground_truth": {
+  "gt300.ivec": "b865fdc59b243a052bea4e100cee828d",
+  "gt300_proxy.ivec": "6b861ffce87fbb25aa2c0f231d5efe94",
+  "gt300_q1500.ivec": "a4cc914cb2712d34a2022dbc2e10ca3b"
+ },
+ "ground_truth_origin": "gt300.ivec: one bench gt run over all 10,000 queries, proxy and q1500 cut from it (data/ground_truth.sh)",
+ "prep_report": {
+  "dataset": "deep",
+  "source": {
+   "base": "base.1B.fbin (first 100000000 rows)",
+   "query": "query.public.10K.fbin"
+  },
+  "base": {
+   "rows": 100000000,
+   "dim": 96,
+   "bytes": 38400000008,
+   "rows_checked": 200000,
+   "norm_min": 0.9999998739334944,
+   "norm_max": 1.0000001360489656,
+   "norm_mean": 0.9999999999245119
+  },
+  "query": {
+   "rows": 10000,
+   "dim": 96,
+   "bytes": 3840008,
+   "rows_checked": 10000,
+   "norm_min": 0.9999998902256164,
+   "norm_max": 1.0000001235761344,
+   "norm_mean": 1.0000000005866336
+  }
+ }
+}

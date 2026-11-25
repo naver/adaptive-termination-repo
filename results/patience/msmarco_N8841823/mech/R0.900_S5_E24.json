@@ -1,0 +1,163 @@
+[
+ {
+  "S": 5,
+  "nq": 1000,
+  "ki": 12,
+  "rule_k": 12,
+  "ef": 24,
+  "trace": "S5_E24.bin",
+  "fixed_end": {
+   "recall": 0.923400000000001,
+   "ndis": 4891.207
+  },
+  "results": [
+   {
+    "kind": "fixed",
+    "recall": 0.923400000000001,
+    "ndis": 4891.207,
+    "stopped": 0.0,
+    "empty_frac": 0.0448,
+    "empty_share": 0.0517070735301123,
+    "all": {
+     "n": 5000,
+     "ndis_per_query": 4891.207,
+     "base_mean": 778.8664,
+     "base_median": 752.0,
+     "base_p1": 345.0,
+     "base_min": 269,
+     "stopped": 0.0
+    },
+    "empty": {
+     "n": 224,
+     "ndis_per_query": 252.91,
+     "base_mean": 941.7946428571429,
+     "base_median": 918.0,
+     "base_p1": 403.82,
+     "base_min": 335,
+     "stopped": 0.0
+    },
+    "useful": {
+     "n": 4776,
+     "ndis_per_query": 4638.297,
+     "base_mean": 771.2248743718593,
+     "base_median": 744.0,
+     "base_p1": 345.0,
+     "base_min": 269,
+     "stopped": 0.0
+    }
+   },
+   {
+    "kind": "gamma",
+    "gamma": "0.00748",
+    "recall": 0.9002000000000001,
+    "ndis": 3764.404,
+    "stopped": 0.9912,
+    "empty_frac": 0.0448,
+    "empty_share": 0.05622510230039071,
+    "all": {
+     "n": 5000,
+     "ndis_per_query": 3764.404,
+     "base_mean": 553.5058,
+     "base_median": 515.0,
+     "base_p1": 220.0,
+     "base_min": 111,
+     "stopped": 0.9912
+    },
+    "empty": {
+     "n": 224,
+     "ndis_per_query": 211.654,
+     "base_mean": 757.6160714285714,
+     "base_median": 703.0,
+     "base_p1": 276.69,
+     "base_min": 265,
+     "stopped": 0.8973214285714286
+    },
+    "useful": {
+     "n": 4776,
+     "ndis_per_query": 3552.75,
+     "base_mean": 543.9327889447236,
+     "base_median": 507.0,
+     "base_p1": 219.75,
+     "base_min": 111,
+     "stopped": 0.9956030150753769
+    }
+   },
+   {
+    "kind": "patience",
+    "queue": "ef",
+    "p": 3,
+    "s": "0.991870",
+    "recall": 0.900200000000001,
+    "ndis": 3855.758,
+    "stopped": 0.9188,
+    "empty_frac": 0.0448,
+    "empty_share": 0.05513312816831347,
+    "all": {
+     "n": 5000,
+     "ndis_per_query": 3855.758,
+     "base_mean": 571.7766,
+     "base_median": 533.0,
+     "base_p1": 220.0,
+     "base_min": 111,
+     "stopped": 0.9188
+    },
+    "empty": {
+     "n": 224,
+     "ndis_per_query": 212.58,
+     "base_mean": 761.75,
+     "base_median": 744.0,
+     "base_p1": 269.29,
+     "base_min": 231,
+     "stopped": 0.7589285714285714
+    },
+    "useful": {
+     "n": 4776,
+     "ndis_per_query": 3643.178,
+     "base_mean": 562.8666247906198,
+     "base_median": 527.0,
+     "base_p1": 219.5,
+     "base_min": 111,
+     "stopped": 0.9262981574539364
+    }
+   },
+   {
+    "kind": "patience",
+    "queue": "ki",
+    "p": 5,
+    "s": "0.989362",
+    "recall": 0.9001000000000009,
+    "ndis": 3806.087,
+    "stopped": 0.9326,
+    "empty_frac": 0.0448,
+    "empty_share": 0.05683763928675303,
+    "all": {
+     "n": 5000,
+     "ndis_per_query": 3806.087,
+     "base_mean": 561.8424,
+     "base_median": 510.0,
+     "base_p1": 208.0,
+     "base_min": 111,
+     "stopped": 0.9326
+    },
+    "empty": {
+     "n": 224,
+     "ndis_per_query": 216.329,
+     "base_mean": 778.4866071428571,
+     "base_median": 769.5,
+     "base_p1": 240.13,
+     "base_min": 229,
+     "stopped": 0.75
+    },
+    "useful": {
+     "n": 4776,
+     "ndis_per_query": 3589.758,
+     "base_mean": 551.6815326633166,
+     "base_median": 501.0,
+     "base_p1": 207.0,
+     "base_min": 111,
+     "stopped": 0.9411641541038526
+    }
+   }
+  ]
+ }
+]
